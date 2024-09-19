@@ -2,40 +2,34 @@ import streamlit as st
 import yt_dlp as youtube_dl
 import os
 
-def download_video(url, download_path):
-    if not url:
-        st.error("Please enter a valid URL.")
-        return
+def download_video(url):
+    # Set the output directory for the video
+    output_dir = "/tmp"  # Use a temporary directory
+    ydl_opts = {
+        'outtmpl': os.path.join(output_dir, '%(title)s.%(ext)s'),
+        'format': 'best',
+    }
 
-    if not download_path:
-        st.error("Please select a download folder.")
-        return
+    # Download the video
+    with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+        info_dict = ydl.extract_info(url, download=True)
+        video_file = os.path.join(output_dir, f"{info_dict['title']}.{info_dict['ext']}")
+    
+    return video_file
 
-    try:
-        ydl_opts = {
-            'outtmpl': os.path.join(download_path, '%(title)s.%(ext)s'),  # Save video in selected folder
-            'format': 'best',
-        }
-
-        # Download the video
-        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([url])
-
-        st.success(f"Video downloaded successfully to {download_path}!")
-    except Exception as e:
-        st.error(f"An error occurred: {e}")
-
-# Create Streamlit app
 st.title("YouTube Video Downloader")
 
-# URL input
 url = st.text_input("Enter YouTube URL:")
-
-# Folder selection
-download_path = st.text_input("Download folder:", os.getcwd())  # Default to current working directory
-if st.button("Browse"):
-    download_path = st.text_input("Enter download path manually:", os.getcwd())  # Placeholder for folder browsing
-
-# Download Button
 if st.button("Download"):
-    download_video(url, download_path)
+    if url:
+        video_file = download_video(url)
+        with open(video_file, "rb") as f:
+            st.download_button(
+                label="Download Video",
+                data=f,
+                file_name=os.path.basename(video_file),
+                mime="video/mp4"
+            )
+        st.success("Video downloaded successfully!")
+    else:
+        st.error("Please enter a valid URL.")
